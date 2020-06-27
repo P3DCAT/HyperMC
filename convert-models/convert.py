@@ -4,7 +4,6 @@ import argparse
 # todo: custom maya arg(s) incl. file convert (bam2maya, etc.)
 # bonus: --panda_path <path/to/panda3d/bin>
 
-
 """
  # Argument Handler #
  Example usage: convert.py --egg2maya --mayaver 2016 -r -v
@@ -16,11 +15,11 @@ parser.add_argument('--bam2egg', '--to_egg', '--to-egg', action='store_true', he
 parser.add_argument('--egg2bam', '--to_bam', '--to-bam', action='store_true', help='Convert EGG file(s) into BAM file(s).')
 parser.add_argument('--egg2maya', action='store_true', help='Convert EGG file(s) into Maya Binary files.')
 parser.add_argument('--maya2egg', action='store_true', help='Convert Maya Binary files into EGG file(s).')
-parser.add_argument('--mayaver', '--mayaversion', '-mv', action='store', nargs='?', type=str, default='2016', metavar='MayaVersion', help='Use specific maya version.')
+parser.add_argument('--mayaver', '--mayaversion', '-mv', action='store', nargs='?', type=str, default='2016', metavar='MayaVersion', help='Use specific maya version. (Default is 2016)')
 parser.add_argument('--obj2egg', action='store_true', help='Convert OBJ files into EGG files.')
 parser.add_argument('--egg2obj', action='store_true', help='Convert EGG files into OBJ files.')
 parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose output.')
-parser.add_argument('--recursive', '-r', action='store_true', help='Convert all folders in the directory, recursively.')
+parser.add_argument('--recursive', '-r', action='store_true', help='Convert all folders in the directory, recursively. Typically used if there are models outside of "phase" folders.')
 parser.add_argument('--legacy', '--use-legacy', type=str, choices=['panda105', 'panda15'], action='store', help='Use Panda3D 1.0.5 or Panda3D 1.5.0 instead to convert LEGACY bams.')
 
 args = parser.parse_args()
@@ -112,6 +111,3 @@ for file in allFiles:
 		print("Converting %s..." % file)
 	subprocess.call(['%s/%s' % (defaultBin, tool), file, newFile])
 print("Conversion complete. Total time elapsed: %d ms" % (int(round(time.time() * 1000)) - start))
-							
-
-	
