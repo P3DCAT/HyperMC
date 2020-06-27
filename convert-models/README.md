@@ -4,6 +4,10 @@ Currently this script supports:
 * bam2egg
 * egg2bam
 * egg2maya<version> (default:2016)
+* egg2obj
+* obj2egg
+* Legacy conversion (Panda3D 1.5.0 and Panda3D 1.0.5)
+
 
 Example usage:
 ``python convert.py --bam2egg --phase 5 5.5 6``
@@ -14,4 +18,5 @@ Will convert any bam files using a legacy method (Panda3D 1.0.5) in all phase fi
 
 # Dependencies 
 - Python 3.8+
+- argparse Python package.
 - Installation of Panda3D with Maya support
