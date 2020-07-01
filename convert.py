@@ -138,7 +138,5 @@ for file in allFiles:
 		continue
 	if verbose:
 		print("Converting %s..." % file)
-	#runArgs = 
-	# todo: 
 	subprocess.call(['%s/%s' % (defaultBin, tool), file] + optionalArgs + [newFile]) # 'bin/panda105/' / 'bam2egg[.exe]' optionalArgs file.bam file.egg
 print("Conversion complete. Total time elapsed: %d ms" % (int(round(time.time() * 1000)) - start))
