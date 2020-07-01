@@ -1,4 +1,4 @@
-# convert-models
+# HyperModelConvert / HyperMC
 This tool is used to bulk convert Panda3D models to a different file format.
 Currently this script supports:
 * bam2egg
@@ -6,8 +6,10 @@ Currently this script supports:
 * egg2maya<version> (default:2016)
 * egg2obj
 * obj2egg
-* Legacy conversion (Panda3D 1.5.0 and Panda3D 1.0.5)
+* Legacy conversion*
 
+For a list of commands, run either
+``python convert.py --help``, or ``python convert.py --pargs`` for egg2bam/bam2egg arguments.
 
 Example usage:
 ``python convert.py --bam2egg --phase 5 5.5 6``
@@ -19,4 +21,11 @@ Will convert any bam files using a legacy method (Panda3D 1.0.5) in all phase fi
 # Dependencies 
 - Python 3.8+
 - argparse Python package.
-- Installation of Panda3D with Maya support
+- Installation of Panda3D with Maya support (optional, only required for maya conversions.)
+
+# Legacy Conversion
+Currently, this tool supports older Panda3D versions, including:
+	- 1.0.5
+	- 1.5.0
+	- 1.6.2
+	- 1.7.2

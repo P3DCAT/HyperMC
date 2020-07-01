@@ -1,7 +1,18 @@
+"""
+	HyperModelConvert / HyperMC
+	Tool to bulk convert Maya Binary and/or Panda3D egg/bam files.
+	Offers legacy support for bulk conversion of older bam file versions.
+	
+	Author: Loonatic
+	Date: 6/26/20
+"""
+
+
 import subprocess, os, time, sys, re
 import argparse
 
 # todo: custom maya arg(s) incl. file convert (bam2maya, etc.)
+# support for panda args, i.e. with bam2egg -h
 # bonus: --panda_path <path/to/panda3d/bin>
 
 """
@@ -20,7 +31,8 @@ parser.add_argument('--obj2egg', action='store_true', help='Convert OBJ files in
 parser.add_argument('--egg2obj', action='store_true', help='Convert EGG files into OBJ files.')
 parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose output.')
 parser.add_argument('--recursive', '-r', action='store_true', help='Convert all folders in the directory, recursively. Typically used if there are models outside of "phase" folders.')
-parser.add_argument('--legacy', '--use-legacy', type=str, choices=['panda105', 'panda15'], action='store', help='Use Panda3D 1.0.5 or Panda3D 1.5.0 instead to convert LEGACY bams.')
+parser.add_argument('--legacy', '--use-legacy', type=str, choices=['panda105', 'panda150', 'panda162', 'panda172'], action='store', help='Use Panda3D 1.0.5 or Panda3D 1.5.0 instead to convert LEGACY bams.')
+parser.add_argument('--panda_args', '--pargs', action='extend', nargs='+', type=str, help='Optional Panda3D args to pass. To get a full list, run `convert.py --pargs`.')
 
 args = parser.parse_args()
 
@@ -53,22 +65,39 @@ elif args.obj2egg:
 elif args.egg2obj:
 	settings = egg2obj
 
+optionalArgs = []
+if args.panda_args is not None:
+	optionalArgs = args.panda_args
+
+"""
+ # Panda3D Version Bam Support [Docme]
+ Panda3D 1.6.2 ~ 6.14 through 6.19
+ ? RobotToon: 6.14 through 6.18 bams.
+
+"""
+legacyDir = {
+	'panda105': "bin/panda105/",
+	'panda150': "bin/panda150/",
+	'panda162': "bin/panda162/",
+	'panda172': "bin/panda172"
+	}
+defaultBin = "bin/" if not args.legacy else legacyDir[args.legacy]
+
 # Make sure a conversion method was properly inputted
 if settings is None:
+	if args.panda_args is not None:
+		print("########################################################################################################################")
+		subprocess.call(['%s/%s' % (defaultBin, 'egg2bam'), '-h'])
+		print("########################################################################################################################")
+		subprocess.call(['%s/%s' % (defaultBin, 'bam2egg'), '-h'])
+		print("########################################################################################################################")
 	parser.print_help()
 	sys.exit()
 
-legacyDir = {
-	'panda105': "bin/panda105/",
-	'panda15': "bin/panda15/"
-	}
-
-# aliases
 inputFile, outputFile, tool = settings
 verbose = args.verbose
 recursive = args.recursive
 selectedPhases = args.selected_phases
-defaultBin = "bin/" if not args.legacy else legacyDir[args.legacy]
 
 if (not recursive) and selectedPhases:
 	recursive = True # we're gonna do recursion on the phases anyway
@@ -109,5 +138,5 @@ for file in allFiles:
 		continue
 	if verbose:
 		print("Converting %s..." % file)
-	subprocess.call(['%s/%s' % (defaultBin, tool), file, newFile])
+	subprocess.call(['%s/%s' % (defaultBin, tool), file + optionalArgs + newFile]) # 'bin/panda105/' / 'bam2egg[.exe]' optionalArgs file.bam file.egg
 print("Conversion complete. Total time elapsed: %d ms" % (int(round(time.time() * 1000)) - start))
