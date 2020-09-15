@@ -94,14 +94,15 @@ elif args.egg2fbx: # egg->fbx
 	settings = egg2obj
 
 #optionalArgs = []
-overwriteArg = ''
+overwriteArg = []
 #if args.panda_args is not None:
 #	args.panda_args = [" -" + arg for arg in args.panda_args]
 	# Grr this is so hacky.
 #	optionalArgs = (args.panda_args)
 	
 if args.overwrite:
-	overwriteArg = '-o'
+	overwriteArg.append('-o')
+	
 	
 
 """
@@ -173,7 +174,7 @@ for file in allFiles:
 		continue
 	if verbose:
 		print("Converting %s..." % file)
-	subprocess.call(['%s/%s' % (defaultBin, tool), file] + [overwriteArg] + [newFile]) # 'bin/panda105' / 'bam2egg[.exe]' optionalArgs file.bam overwriteArg newFile.egg
-	print(['%s/%s' % (defaultBin, tool), file] + [overwriteArg] + [newFile])
+	subprocess.call(['%s/%s' % (defaultBin, tool), file] + overwriteArg + [newFile]) # 'bin/panda105' / 'bam2egg[.exe]' optionalArgs file.bam overwriteArg newFile.egg
+	#print(['%s/%s' % (defaultBin, tool), file] + [overwriteArg] + [newFile])
 	#print(['%s/%s' % (defaultBin, tool), ''.join(optionalArgs), file] + [overwriteArg] + [newFile])
 print("Conversion complete. Total time elapsed: %d ms" % (int(round(time.time() * 1000)) - start))
