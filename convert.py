@@ -8,11 +8,11 @@
 	Date: 6/26/20
 """
 import subprocess, os, time, sys, re
+import psutil
 import argparse
 
 # todo: custom maya arg(s) incl. file convert (bam2maya, etc.)
 # support for panda args, i.e. with bam2egg -h
-# bonus: --panda_path <path/to/panda3d/bin>
 
 """
  # Argument Handler #
@@ -22,13 +22,19 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--all-phases', '--all_phases', action='store_true', help='Convert all phase files folders. (3 to 14)')
 parser.add_argument('--selected_phases', '--phase', action='extend', nargs='+', type=str, metavar='3 3.5 4', help='List phase files folders to convert.')
 
+parser.add_argument('--bindir', '-bin', '-b', action='store', type=str, help='Set folder path to desired Panda3D bin location', default="bin/")
+parser.add_argument('--fromfile', '--file', '-f', action='store_true', help='Use this flag to read the path from the PANDA_BIN_PATH folder.')
+
 ## Bam
 parser.add_argument('--bam2egg', '--to_egg', '--to-egg', action='store_true', help='Convert BAM file(s) into EGG file(s).')
 parser.add_argument('--egg2bam', '--to_bam', '--to-bam', action='store_true', help='Convert EGG file(s) into BAM file(s).')
 
 ## Maya
 parser.add_argument('--egg2maya', action='store_true', help='Convert EGG file(s) into Maya Binary files.')
-parser.add_argument('--maya2egg', action='store_true', help='Convert Maya Binary files into EGG file(s).')
+parser.add_argument('--egg2maya_legacy', action='store_true', help='Convert EGG file(s) into Maya Binary files. [LEGACY]')
+
+parser.add_argument('--maya2egg', action='store_true', help='Convert Maya Binary file(s) into EGG files.')
+parser.add_argument('--maya2egg_legacy', action='store_true', help='Convert Maya Binary files into EGG file(s). [LEGACY]')
 parser.add_argument('--mayaver', '--mayaversion', '-mv', action='store', nargs='?', type=str, default='2016', metavar='MayaVersion', help='Use specific maya version. (Default is 2016)')
 
 ## Obj
@@ -43,7 +49,9 @@ parser.add_argument('--egg2fbx', action='store_true', help='Convert EGG files in
 parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose output.')
 parser.add_argument('--overwrite', '-o', action='store_true', help='Overwrite preexisting files.')
 parser.add_argument('--recursive', '-r', action='store_true', help='Convert all folders in the directory, recursively. Typically used if there are models outside of "phase" folders.')
-parser.add_argument('--legacy', '--use-legacy', type=str, choices=['panda105', 'panda150', 'panda162', 'panda172'], action='store', help='Use Panda3D 1.0.5 or Panda3D 1.5.0 instead to convert LEGACY bams.')
+
+# Deprecating this feature. Go get your own Panda!
+#parser.add_argument('--legacy', '--use-legacy', type=str, choices=['panda105', 'panda150', 'panda162', 'panda172', 'panda181'], action='store', help='Use Panda3D 1.0.5 or Panda3D 1.5.0 instead to convert LEGACY bams.')
 #parser.add_argument('--panda_args', '--pargs', action='extend', nargs='+', type=str, help='Optional Panda3D args to pass. To get a full list, run `convert.py --pargs help`.')
 # Note: Removing pargs cause I dunno how to make this pretty at the moment
 
@@ -63,8 +71,10 @@ bam2egg = ['.bam', '.egg', 'bam2egg.exe']
 egg2bam = ['.egg', '.bam', 'egg2bam.exe']
 
 ## Maya
-egg2maya = ['.egg', '.mb', 'egg2maya%s.exe' % args.mayaver]
-maya2egg = ['.mb', '.egg', 'maya2egg%s.exe' % args.mayaver]
+egg2maya_legacy = ['.egg', '.mb', 'egg2maya%s.exe' % args.mayaver]
+egg2maya = ['.egg', '.mb', 'egg2maya_client.exe']
+maya2egg_legacy = ['.mb', '.egg', 'maya2egg%s.exe' % args.mayaver]
+maya2egg = ['.mb', '.egg', 'egg2maya_client.exe']
 
 ## Obj
 obj2egg = ['.obj', '.egg', 'obj2egg.exe']
@@ -80,8 +90,12 @@ if args.bam2egg:
 	settings = bam2egg
 elif args.egg2bam:
 	settings = egg2bam
+elif args.egg2maya_legacy:
+	settings = egg2maya_legacy
 elif args.egg2maya:
 	settings = egg2maya
+elif args.maya2egg_legacy:
+	settings = maya2egg_legacy
 elif args.maya2egg:
 	settings = maya2egg
 elif args.obj2egg: # obj->egg
@@ -93,39 +107,35 @@ elif args.fbx2egg: # fbx->egg
 elif args.egg2fbx: # egg->fbx
 	settings = egg2obj
 
+maya_mode = args.egg2maya or args.maya2egg
+maya_legacy = args.egg2maya_legacy or args.maya2egg_legacy
+
 #optionalArgs = []
 overwriteArg = []
 #if args.panda_args is not None:
 #	args.panda_args = [" -" + arg for arg in args.panda_args]
 	# Grr this is so hacky.
 #	optionalArgs = (args.panda_args)
-	
+
 if args.overwrite:
 	overwriteArg.append('-o')
-	
-	
 
-"""
- # Panda3D Version Bam Support [Docme]
- Panda3D 1.6.2 ~ 6.14 through 6.19
- ? RobotToon: 6.14 through 6.18 bams.
-
-"""
-legacyDir = {
-	'panda105': "bin/panda105/",
-	'panda150': "bin/panda150/",
-	'panda162': "bin/panda162/",
-	'panda172': "bin/panda172"
-	}
-defaultBin = "bin/" if not args.legacy else legacyDir[args.legacy]
+if args.fromfile:
+	if not os.path.isfile("PANDA_BIN_PATH"):
+		print("Error: Cannot read from the PANDA_BIN_PATH file. Please make sure the file exists in this directory and try again.")
+		sys.exit()
+	path = open("PANDA_BIN_PATH", 'r').readline()
+	defaultBin = path
+else:
+	defaultBin = args.bindir
 
 # Make sure a conversion method was properly inputted
 if settings is None:
 	if args.panda_args is not None:
 		print("########################################################################################################################")
-		subprocess.call(['%s/%s' % (defaultBin, 'egg2bam'), '-h'])
+		subprocess.run(['%s/%s' % (defaultBin, 'egg2bam'), '-h'])
 		print("########################################################################################################################")
-		subprocess.call(['%s/%s' % (defaultBin, 'bam2egg'), '-h'])
+		subprocess.run(['%s/%s' % (defaultBin, 'bam2egg'), '-h'])
 		print("########################################################################################################################")
 	parser.print_help()
 	sys.exit()
@@ -140,6 +150,21 @@ if (not recursive) and selectedPhases:
 
 if verbose and selectedPhases:
 	print(selectedPhases)
+
+DETACHED_PROCESS = 0x00000008 # A tad hacky, but we need this for the Maya service.
+mayaProcess = tool[0:8]
+mayaServer = str(mayaProcess+args.mayaver+"_bin.exe") # maya2egg20xx_bin.exe
+def checkMayaServer():
+	if not mayaServer in (p.name() for p in psutil.process_iter()):
+		if verbose:
+			print("Attempting to start the Maya server...")
+		subprocess.Popen(['%s/%s%s' % (defaultBin, mayaProcess, args.mayaver), "-server"], creationflags=DETACHED_PROCESS)
+		if verbose:
+			print("Sleeping for 5 seconds...")
+		time.sleep(5) # give it some time
+		checkMayaServer()
+	else:
+		return # It's running, no problem.
 
 # Uses milliseconds for now.
 start = int(round(time.time() * 1000))
@@ -168,13 +193,13 @@ else:
 		allFiles.append(file)
 for file in allFiles:
 	newFile = file.replace(inputFile, outputFile)
-	if os.path.exists(newFile):
+	if os.path.exists(newFile) and not args.overwrite:
 		if verbose:
 			print('%s already exists' % newFile)
 		continue
 	if verbose:
 		print("Converting %s..." % file)
-	subprocess.call(['%s/%s' % (defaultBin, tool), file] + overwriteArg + [newFile]) # 'bin/panda105' / 'bam2egg[.exe]' optionalArgs file.bam overwriteArg newFile.egg
-	#print(['%s/%s' % (defaultBin, tool), file] + [overwriteArg] + [newFile])
-	#print(['%s/%s' % (defaultBin, tool), ''.join(optionalArgs), file] + [overwriteArg] + [newFile])
+	if maya_mode and not maya_legacy:
+			checkMayaServer() # Check & run for the Maya server.
+	subprocess.run(['%s/%s' % (defaultBin, tool), file] + overwriteArg + [newFile]) # 'bin/panda105' / 'bam2egg[.exe]' optionalArgs file.bam overwriteArg newFile.egg
 print("Conversion complete. Total time elapsed: %d ms" % (int(round(time.time() * 1000)) - start))
