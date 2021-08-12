@@ -89,5 +89,5 @@ if recursive: # Recursion time!
 	for file in allFiles:
 		if verbose:
 			print("Removing %s..." % file)
-		#os.remove(file)
+		os.remove(file)
 print("Conversion complete. Total time elapsed: %d ms" % (int(round(time.time() * 1000)) - start))
