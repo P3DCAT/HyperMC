@@ -76,17 +76,18 @@ if recursive: # Recursion time!
 						print("Adding %s" %file)
 					file = os.path.join(root, file)
 					allFiles.append(file)
-	else:
-		for file in os.listdir('.'):
-			if not file.endswith(input):
-				if verbose:
-					print("Skipping %s" % file)
-				continue
-			if verbose:
-				print("Adding in %s" % file)
-			allFiles.append(file)
+                # we do not want to wipe egg files in root right now
+#   else:
+#		for file in os.listdir('.'):
+#			if not file.endswith(input):
+#				if verbose:
+#					print("Skipping %s" % file)
+#				continue
+#			if verbose:
+#				print("Adding in %s" % file)
+#			allFiles.append(file)
 	for file in allFiles:
 		if verbose:
 			print("Removing %s..." % file)
-		os.remove(file)
+		#os.remove(file)
 print("Conversion complete. Total time elapsed: %d ms" % (int(round(time.time() * 1000)) - start))
