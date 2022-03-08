@@ -7,7 +7,10 @@
     Author: Loonatic
     Date: 6/26/20
 """
-import subprocess, os, time, sys, re
+import subprocess
+import os
+import time
+import sys
 import psutil
 import argparse
 
