@@ -202,4 +202,11 @@ for file in allFiles:
 	if maya_mode and not maya_legacy:
 			checkMayaServer() # Check & run for the Maya server.
 	subprocess.run(['%s/%s' % (defaultBin, tool), file] + overwriteArg + [newFile]) # 'bin/panda105' / 'bam2egg[.exe]' optionalArgs file.bam overwriteArg newFile.egg
+
+# One more thing, let's clean up the maya server.
+if maya_mode and not maya_legacy:
+	for p in psutil.process_iter():
+		if p.name() is mayaServer:
+			p.kill()
+
 print("Conversion complete. Total time elapsed: %d ms" % (int(round(time.time() * 1000)) - start))

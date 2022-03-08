@@ -6,5 +6,5 @@ echo Make sure that you are running on Python 3.8+
 set /P PPYTHON_PATH=<PPYTHON_PATH
 
 %PPYTHON_PATH% -m pip install -r requirements.txt
-%PPYTHON_PATH% convert.py --egg2bam --all-phases
+%PPYTHON_PATH% hmconvert.py --fromfile --egg2bam --all-phases
 pause
