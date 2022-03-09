@@ -38,6 +38,16 @@ parser.add_argument(
     metavar = '3 3.5 4',
     help = 'List phase files folders to convert.'
 )
+parser.add_argument(
+    '--selected_folders',
+    '--folder',
+    '--folders',
+    action = 'extend',
+    nargs = '+',
+    type = str,
+    metavar = 'models/',
+    help = 'List of folders with subfolders to convert.'
+)
 
 parser.add_argument(
     '--bindir',
@@ -162,11 +172,19 @@ args = parser.parse_args()
 
 ### End of arg configuring ###
 
+# If the user gave us particular folders, let's not consider them to be phase files.
+selectedFolders = args.selected_folders
+
 # Config #
 # mayaArgs = "-a -m" ?
 allFiles = []
-if args.all_phases:
-    args.selected_phases = ['3', '3.5', '4', '5', '5.5', '6', '7', '8', '9', '10', '11', '12', '13', '14']
+
+if not selectedFolders:
+    if args.all_phases:
+        args.selected_phases = ['3', '3.5', '4', '5', '5.5', '6', '7', '8', '9', '10', '11', '12', '13', '14']
+else:
+    args.selected_phases = None
+    args.all_phases = None
 
 # Tool settings
 settings = None  # [ inputFile, outputFile, tool ]
@@ -253,11 +271,13 @@ verbose = args.verbose
 recursive = args.recursive
 selectedPhases = args.selected_phases
 
-if (not recursive) and selectedPhases:
+if (not recursive) and (selectedPhases or selectedFolders):
     recursive = True  # we're gonna do recursion on the phases anyway
 
 if verbose and selectedPhases:
     print(selectedPhases)
+elif verbose and selectedFolders:
+    print(selectedFolders)
 
 DETACHED_PROCESS = 0x00000008  # A tad hacky, but we need this for the Maya service.
 mayaProcess = tool[0:8]
@@ -279,43 +299,97 @@ def checkMayaServer():
         return  # It's running, no problem.
 
 
+def convertPhases(phases):
+    if recursive:  # Recursion time!
+        for phase in phases:
+            if not os.path.exists('phase_%s' % phase):
+                continue
+            for root, _, files in os.walk('phase_%s' % phase):
+                for file in files:
+                    if not file.endswith(inputFile):  # Input file
+                        if verbose:
+                            print("Skipping %s" % file)
+                        continue
+                    if verbose:
+                        print("Adding %s" % file)
+                    file = os.path.join(root, file)
+                    allFiles.append(file)
+    else:
+        for file in os.listdir('.'):
+            if not file.endswith(inputFile):
+                if verbose:
+                    print("Skipping %s" % file)
+                continue
+            if verbose:
+                print("Adding in %s" % file)
+            allFiles.append(file)
+    for file in allFiles:
+        newFile = file.replace(inputFile, outputFile)
+        if os.path.exists(newFile) and not args.overwrite:
+            if verbose:
+                print('%s already exists' % newFile)
+            continue
+        if verbose:
+            print("Converting %s..." % file)
+        if maya_mode and not maya_legacy:
+            checkMayaServer()  # Check & run for the Maya server.
+        # 'bin/panda105' / 'bam2egg[.exe]' optionalArgs file.bam overwriteArg newFile.egg
+        subprocess.run(['%s/%s' % (defaultBin, tool), file] + overwriteArg + [newFile])
+
+
+def convertFolders(folders):
+    if recursive:  # Recursion time!
+        for folder in folders:
+            if not os.path.exists(folder):
+                continue
+            for root, _, files in os.walk(folder):
+                for file in files:
+                    if not file.endswith(inputFile):  # Input file
+                        if verbose:
+                            print("Skipping %s" % file)
+                        continue
+                    if verbose:
+                        print("Adding %s" % file)
+                    file = os.path.join(root, file)
+                    allFiles.append(file)
+    else:
+        for file in os.listdir('.'):
+            if not file.endswith(inputFile):
+                if verbose:
+                    print("Skipping %s" % file)
+                continue
+            if verbose:
+                print("Adding in %s" % file)
+            allFiles.append(file)
+    for file in allFiles:
+        newFile = file.replace(inputFile, outputFile)
+        if os.path.exists(newFile) and not args.overwrite:
+            if verbose:
+                print('%s already exists' % newFile)
+            continue
+        if verbose:
+            print("Converting %s..." % file)
+        if maya_mode and not maya_legacy:
+            checkMayaServer()  # Check & run for the Maya server.
+        # 'bin/panda105' / 'bam2egg[.exe]' optionalArgs file.bam overwriteArg newFile.egg
+        subprocess.run(['%s/%s' % (defaultBin, tool), file] + overwriteArg + [newFile])
+
+# Startup #
+
 # Uses milliseconds for now.
 start = int(round(time.time() * 1000))
-if recursive:  # Recursion time!
-    for phase in selectedPhases:
-        if not os.path.exists('phase_%s' % phase):
-            continue
-        for root, _, files in os.walk('phase_%s' % phase):
-            for file in files:
-                if not file.endswith(inputFile):  # Input file
-                    if verbose:
-                        print("Skipping %s" % file)
-                    continue
-                if verbose:
-                    print("Adding %s" % file)
-                file = os.path.join(root, file)
-                allFiles.append(file)
+
+# Which operation are we gonna run?
+if selectedPhases:
+    convertPhases(selectedPhases)
+elif selectedFolders:
+    convertFolders(selectedFolders)
 else:
-    for file in os.listdir('.'):
-        if not file.endswith(inputFile):
-            if verbose:
-                print("Skipping %s" % file)
-            continue
-        if verbose:
-            print("Adding in %s" % file)
-        allFiles.append(file)
-for file in allFiles:
-    newFile = file.replace(inputFile, outputFile)
-    if os.path.exists(newFile) and not args.overwrite:
-        if verbose:
-            print('%s already exists' % newFile)
-        continue
-    if verbose:
-        print("Converting %s..." % file)
-    if maya_mode and not maya_legacy:
-        checkMayaServer()  # Check & run for the Maya server.
-    subprocess.run(['%s/%s' % (defaultBin, tool), file] + overwriteArg + [
-        newFile])  # 'bin/panda105' / 'bam2egg[.exe]' optionalArgs file.bam overwriteArg newFile.egg
+    # Uhm, user should not get here. Probably a good idea to yell at 'em for invalid arguments.
+    print("Error: You need to include either the selectedPhases or selectedFolders arg, but not both!")
+    # Probably not a good thing to do sys.exit() since we wouldn't kill the maya process.
+
+# Cleanup #
 
 # One more thing, let's clean up the maya server.
 if maya_mode and not maya_legacy:
