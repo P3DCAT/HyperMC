@@ -197,7 +197,7 @@ egg2bam = ['.egg', '.bam', 'egg2bam.exe']
 egg2maya_legacy = ['.egg', '.mb', 'egg2maya%s.exe' % args.mayaver]
 egg2maya = ['.egg', '.mb', 'egg2maya_client.exe']
 maya2egg_legacy = ['.mb', '.egg', 'maya2egg%s.exe' % args.mayaver]
-maya2egg = ['.mb', '.egg', 'egg2maya_client.exe']
+maya2egg = ['.mb', '.egg', 'maya2egg_client.exe']
 
 ## Obj
 obj2egg = ['.obj', '.egg', 'obj2egg.exe']
@@ -251,6 +251,7 @@ if args.fromfile:
         )
         sys.exit()
     path = open("PANDA_BIN_PATH", 'r').readline()
+    path = path.replace("\\", "/")
     defaultBin = path
 else:
     defaultBin = args.bindir
