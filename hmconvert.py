@@ -14,8 +14,10 @@ import sys
 import psutil
 import argparse
 
-# todo: custom maya arg(s) incl. file convert (bam2maya, etc.)
-# support for panda args, i.e. with bam2egg -h
+# todo:
+#   custom maya arg(s) incl. file convert (bam2maya, etc.)
+#   support for panda args, i.e. with bam2egg -h
+#   warn the user if the maya2egg_server / client is missing so we dont run into an infinite loop
 
 """
  # Argument Handler #
@@ -170,7 +172,7 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-### End of arg configuring ###
+### End of argparse configuring ###
 
 # If the user gave us particular folders, let's not consider them to be phase files.
 selectedFolders = args.selected_folders
@@ -258,6 +260,7 @@ else:
 
 # Make sure a conversion method was properly inputted
 if settings is None:
+    # Bug: causes the script to immaturely crash if you do not pass in any arguments
     # if args.panda_args is not None:
     #     print("#######################################################################################################")
     #     subprocess.run(['%s/%s' % (defaultBin, 'egg2bam'), '-h'])
@@ -275,6 +278,7 @@ selectedPhases = args.selected_phases
 if (not recursive) and (selectedPhases or selectedFolders):
     recursive = True  # we're gonna do recursion on the phases anyway
 
+# Let's list the folders we're gonna iterate through if we wanna be verbose.
 if verbose and selectedPhases:
     print(selectedPhases)
 elif verbose and selectedFolders:
