@@ -233,15 +233,19 @@ elif args.egg2fbx:  # egg->fbx
     settings = egg2obj
 
 
+# Optional args (unfinished)
 # optionalArgs = []
-overwriteArg = []
 # if args.panda_args is not None:
 #	args.panda_args = [" -" + arg for arg in args.panda_args]
 # Grr this is so hacky.
 #	optionalArgs = (args.panda_args)
+####
 
+# Overwrite arg
+overwriteArg = []
 if args.overwrite:
     overwriteArg.append('-o')
+####
 
 if args.fromfile:
     if not os.path.isfile("PANDA_BIN_PATH"):
@@ -361,8 +365,7 @@ def convertPhases(phases):
     for file in allFiles:
         newFile = file.replace(inputFile, outputFile)
         if os.path.exists(newFile) and not args.overwrite:
-            if verbose:
-                print('%s already exists' % newFile)
+            print('Warning: %s already exists' % newFile)
             continue
         if verbose:
             print("Converting %s..." % file)
@@ -403,8 +406,7 @@ def convertFolders(folders):
     for file in allFiles:
         newFile = file.replace(inputFile, outputFile)
         if os.path.exists(newFile) and not args.overwrite:
-            if verbose:
-                print('%s already exists' % newFile)
+            print('Warning: %s already exists' % newFile)
             continue
         if verbose:
             print("Converting %s..." % file)
@@ -412,6 +414,7 @@ def convertFolders(folders):
             checkMayaServer()  # Check & run for the Maya server.
         # 'bin/panda105' / 'bam2egg[.exe]' optionalArgs file.bam overwriteArg newFile.egg
         subprocess.run(['%s/%s' % (defaultBin, tool), file] + overwriteArg + [newFile])
+
 
 # Startup #
 
