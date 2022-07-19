@@ -232,8 +232,6 @@ elif args.fbx2egg:  # fbx->egg
 elif args.egg2fbx:  # egg->fbx
     settings = egg2obj
 
-maya_mode = args.egg2maya or args.maya2egg
-maya_legacy = args.egg2maya_legacy or args.maya2egg_legacy
 
 # optionalArgs = []
 overwriteArg = []
@@ -284,17 +282,47 @@ if verbose and selectedPhases:
 elif verbose and selectedFolders:
     print(selectedFolders)
 
-DETACHED_PROCESS = 0x00000008  # A tad hacky, but we need this for the Maya service.
-mayaProcess = tool[0:8]
-mayaServer = str(mayaProcess + args.mayaver + "_bin.exe")  # maya2egg20xx_bin.exe
 
+# Maya configuration
+global maya_mode
+maya_mode = args.egg2maya or args.maya2egg
+
+# We globalize maya_legacy to rollback if maya server fails.
+# We probably don't *Need* to do this though..?
+global maya_legacy
+maya_legacy = args.egg2maya_legacy or args.maya2egg_legacy
+
+# Not defined in the checkMayaServer function to ensure it gets properly cleaned up after the conversion.
+global mayaProcess
+mayaProcess = tool[0:8]
+
+global mayaServer
+mayaServer = str(mayaProcess + args.mayaver + "_bin.exe")  # maya2egg20xx_bin.exe
+####
 
 def checkMayaServer():
+    DETACHED_PROCESS = 0x00000008  # A tad hacky, but we need this for the Maya service.
+    global mayaProcess
+    global maya_legacy
+    global mayaServer
     if not mayaServer in (p.name() for p in psutil.process_iter()):
         if verbose:
             print("Attempting to start the Maya server...")
+        mayaServerLocation = str('%s/%s%s' % (defaultBin, mayaProcess, args.mayaver)) + ".exe"
+        if verbose:
+            print("Checking for " + mayaServerLocation)
+        if not os.path.exists(mayaServerLocation):
+            print("ERROR: Can't find the Maya server process!")
+            sys.exit()
+
+            # I would rather *not* kill the script and revert to maya legacy instead, but for now this'll do.
+            # print("ERROR: Can't find the Maya server process! Automatically reverting to legacy mode...")
+            # maya_legacy = True
+            # WIP: will this work? If it doesn't, then we will unfortunately skip the first model entered.
+            # tool = str(mayaProcess + args.mayaver)
+            return
         subprocess.Popen(
-            ['%s/%s%s' % (defaultBin, mayaProcess, args.mayaver), "-server"], creationflags = DETACHED_PROCESS
+            [mayaServerLocation, "-server"], creationflags = DETACHED_PROCESS
         )
         if verbose:
             print("Sleeping for 5 seconds...")
@@ -305,6 +333,8 @@ def checkMayaServer():
 
 
 def convertPhases(phases):
+    global maya_legacy
+    global maya_mode
     if recursive:  # Recursion time!
         for phase in phases:
             if not os.path.exists('phase_%s' % phase):
@@ -337,12 +367,16 @@ def convertPhases(phases):
         if verbose:
             print("Converting %s..." % file)
         if maya_mode and not maya_legacy:
+            if verbose:
+                print("Checking to see if we have a Maya server up and running...")
             checkMayaServer()  # Check & run for the Maya server.
         # 'bin/panda105' / 'bam2egg[.exe]' optionalArgs file.bam overwriteArg newFile.egg
         subprocess.run(['%s/%s' % (defaultBin, tool), file] + overwriteArg + [newFile])
 
 
 def convertFolders(folders):
+    global maya_mode
+    global maya_legacy
     if recursive:  # Recursion time!
         for folder in folders:
             if not os.path.exists(folder):
@@ -392,7 +426,8 @@ elif selectedFolders:
 else:
     # Uhm, user should not get here. Probably a good idea to yell at 'em for invalid arguments.
     print("Error: You need to include either the selectedPhases or selectedFolders arg, but not both!")
-    # Probably not a good thing to do sys.exit() since we wouldn't kill the maya process.
+    # We can safely call sys.exit() as we never called the maya server to init.
+    sys.exit()
 
 # Cleanup #
 
