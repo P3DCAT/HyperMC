@@ -50,7 +50,12 @@ parser.add_argument(
     metavar = 'models/',
     help = 'List of folders with subfolders to convert.'
 )
-
+parser.add_argument(
+    '--rootonly',
+    '--root',
+    action = 'store_true',
+    help = 'Just convert files in the root of the working directory.'
+)
 parser.add_argument(
     '--bindir',
     '-bin',
@@ -276,9 +281,14 @@ inputFile, outputFile, tool = settings
 verbose = args.verbose
 recursive = args.recursive
 selectedPhases = args.selected_phases
+rootOnly = args.rootonly
 
 if (not recursive) and (selectedPhases or selectedFolders):
     recursive = True  # we're gonna do recursion on the phases anyway
+
+if rootOnly and (selectedPhases or selectedFolders):
+    print("Error: You can't specify rootOnly and selected phases or folders.")
+    sys.exit()
 
 # Let's list the folders we're gonna iterate through if we wanna be verbose.
 if verbose and selectedPhases:
@@ -415,6 +425,41 @@ def convertFolders(folders):
         # 'bin/panda105' / 'bam2egg[.exe]' optionalArgs file.bam overwriteArg newFile.egg
         subprocess.run(['%s/%s' % (defaultBin, tool), file] + overwriteArg + [newFile])
 
+def convertRoot():
+    global maya_mode
+    global maya_legacy
+    if recursive:  # Recursion time!
+        for root, _, files in os.walk('.'):
+            for file in files:
+                if not file.endswith(inputFile):  # Input file
+                    if verbose:
+                        print("Skipping %s" % file)
+                    continue
+                if verbose:
+                    print("Adding %s" % file)
+                file = os.path.join(root, file)
+                allFiles.append(file)
+    else:
+        for file in os.listdir('.'):
+            if not file.endswith(inputFile):
+                if verbose:
+                    print("Skipping %s" % file)
+                continue
+            if verbose:
+                print("Adding in %s" % file)
+            allFiles.append(file)
+    for file in allFiles:
+        newFile = file.replace(inputFile, outputFile)
+        if os.path.exists(newFile) and not args.overwrite:
+            print('Warning: %s already exists' % newFile)
+            continue
+        if verbose:
+            print("Converting %s..." % file)
+        if maya_mode and not maya_legacy:
+            checkMayaServer()  # Check & run for the Maya server.
+        # 'bin/panda105' / 'bam2egg[.exe]' optionalArgs file.bam overwriteArg newFile.egg
+        subprocess.run(['%s/%s' % (defaultBin, tool), file] + overwriteArg + [newFile])
+
 
 # Startup #
 
@@ -426,6 +471,8 @@ if selectedPhases:
     convertPhases(selectedPhases)
 elif selectedFolders:
     convertFolders(selectedFolders)
+elif rootOnly:
+    convertRoot()
 else:
     # Uhm, user should not get here. Probably a good idea to yell at 'em for invalid arguments.
     print("Error: You need to include either the selectedPhases or selectedFolders arg, but not both!")
